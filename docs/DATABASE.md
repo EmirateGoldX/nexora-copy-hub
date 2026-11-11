@@ -2,7 +2,11 @@
 
 **Mesin:** PostgreSQL serverless di **Neon**
 **Proyek:** `young-silence-64409572`
-**Branch:** `br-still-mud-ao2vyeav`
+
+| Branch | ID | Peran | Skema |
+|---|---|---|---|
+| `production` | `br-still-mud-ao2vyeav` | produksi | **0 tabel** — sengaja kosong sampai backend siap |
+| `dev` | `br-shy-mode-aopniv5t` | pengembangan | skema lengkap diterapkan (13 tabel incl. pelacak) |
 
 ---
 
@@ -12,10 +16,11 @@
 |---|---|
 | Skema ditulis | ✅ `db/migrations/0001_init.sql` |
 | Data contoh | ✅ `db/migrations/0002_seed_demo.sql` |
-| Diterapkan ke Neon | ❌ **belum** — butuh persetujuan + kredensial koneksi |
+| Diterapkan ke Neon `dev` | ✅ sudah — 2 migrasi, 13 tabel, terverifikasi dari koneksi terpisah |
+| Diterapkan ke Neon `production` | ❌ **belum** — sengaja, menunggu backend |
 | Backend yang memakainya | ❌ belum ada |
 
-Skema ini **rancangan**. Belum dijalankan di database mana pun.
+Skema sudah **dibuktikan berjalan**, tapi belum ada aplikasi yang memakainya.
 
 ---
 
@@ -24,6 +29,7 @@ Skema ini **rancangan**. Belum dijalankan di database mana pun.
 ### Lewat runner (disarankan)
 
 ```bash
+# ambil connection string branch 'dev' dari Neon Console -> Connect
 export DATABASE_URL='postgresql://<user>:<pass>@<host>/<db>?sslmode=require'
 python3 tools/apply_migrations.py            # jalankan migrasi yang belum diterapkan
 python3 tools/apply_migrations.py --verify   # hanya verifikasi

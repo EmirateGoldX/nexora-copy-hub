@@ -17,23 +17,25 @@ values
 on conflict do nothing;
 
 -- akun follower (demo)
+-- CAST 'fixed'::volume_rule WAJIB: pada INSERT ... UNION ALL, Postgres
+-- menyimpulkan tipe gabungan sebagai text, bukan enum volume_rule.
 insert into followers (label, broker, server, login, master_id, map_symbol_from, map_symbol_to,
                        volume_rule, volume_value, copy_partial, copy_pending, clamp_sltp,
                        max_lot, max_positions, note)
 select 'Follower 1', 'Exness', 'Exness-MT5Trial14', '416546980', m.id,
-       'XAUUSD', 'XAUUSD', 'fixed', 0.05, true, true, true, 0.50, 5, 'demo'
+       'XAUUSD', 'XAUUSD', 'fixed'::volume_rule, 0.05, true, true, true, 0.50, 5, 'demo'
 from masters m where m.login = '415823123'
 union all
 select 'Follower 2', 'Exness', 'Exness-MT5Trial14', '415823124', m.id,
-       'XAUUSD', 'XAUUSDm', 'multiplier', 1.0, true, true, true, 0.50, 5, 'demo'
+       'XAUUSD', 'XAUUSDm', 'multiplier'::volume_rule, 1.0, true, true, true, 0.50, 5, 'demo'
 from masters m where m.login = '415823123'
 union all
 select 'Follower 3', 'IC Markets', 'ICMarketsSC-MT5', '1191030711', m.id,
-       'XAUUSD', 'XAUUSD.m', 'equity', 0.8, true, true, true, 0.30, 3, 'demo'
+       'XAUUSD', 'XAUUSD.m', 'equity'::volume_rule, 0.8, true, true, true, 0.30, 3, 'demo'
 from masters m where m.login = '415823123'
 union all
 select 'Follower 4', 'XM', 'XMGlobal-MT5 10', '191397901', m.id,
-       'GOLD', 'GOLD', 'fixed', 0.10, true, true, true, 0.50, 5, 'demo'
+       'GOLD', 'GOLD', 'fixed'::volume_rule, 0.10, true, true, true, 0.50, 5, 'demo'
 from masters m where m.login = '191397900'
 on conflict do nothing;
 

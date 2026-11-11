@@ -21,16 +21,26 @@ Skema ini **rancangan**. Belum dijalankan di database mana pun.
 
 ## 2. Cara menerapkan
 
-### Manual (paling terkontrol)
-
-Ambil connection string dari Neon Console → **Connect** → pilih branch
-`br-still-mud-ao2vyeav`. Pakai **direct** connection (bukan pooled) untuk migrasi:
+### Lewat runner (disarankan)
 
 ```bash
 export DATABASE_URL='postgresql://<user>:<pass>@<host>/<db>?sslmode=require'
+python3 tools/apply_migrations.py            # jalankan migrasi yang belum diterapkan
+python3 tools/apply_migrations.py --verify   # hanya verifikasi
+python3 tools/apply_migrations.py --dry-run  # hanya hitung statement
+```
 
-psql "$DATABASE_URL" -f db/migrations/0001_init.sql
-psql "$DATABASE_URL" -f db/migrations/0002_seed_demo.sql
+Runner ini:
+- mencatat migrasi di tabel `schema_migrations` → tidak dijalankan dua kali
+- **otomatis membuang `-pooler`** dari host (migrasi wajib direct)
+- memakai `BEGIN`/`COMMIT` eksplisit per file (satu file = satu transaksi)
+- membuka **koneksi baru** di akhir untuk membuktikan data benar-benar tersimpan
+
+### Manual (psql)
+
+```bash
+psql "$DIRECT_URL" -f db/migrations/0001_init.sql
+psql "$DIRECT_URL" -f db/migrations/0002_seed_demo.sql
 ```
 
 Verifikasi:
@@ -99,7 +109,50 @@ tapi tidak diperbaiki. `sync_error` harus diperbaiki atau di-alert.
 
 ---
 
-## 6. Yang belum ada
+## 6. Dua jebakan yang sudah memakan waktu
+
+### 6.1 Koneksi pooler untuk migrasi — DDL tidak aman
+
+Endpoint Neon berakhiran `-pooler` memakai mode *transaction pooling*. Urutan
+`BEGIN` … `COMMIT` bisa mendarat di koneksi server berbeda sehingga migrasi
+**tampak sukses** (output "OK 47/47") tetapi tidak tersimpan.
+
+Pakai host **tanpa** `-pooler` untuk migrasi. Untuk aplikasi justru sebaliknya:
+pooled, karena serverless Postgres punya batas koneksi.
+
+### 6.2 `conn.transaction()` saat `autocommit=False` = SAVEPOINT
+
+Di psycopg3, jika `autocommit = False`, `with conn.transaction():` **tidak**
+membuat transaksi baru — ia membuat SAVEPOINT dan melepasnya, tanpa COMMIT.
+Akibatnya semua tulisan hilang saat koneksi ditutup, padahal skrip melaporkan sukses.
+
+Pola yang benar:
+
+```python
+conn.autocommit = True
+conn.execute("BEGIN")
+for stmt in statements:
+    conn.execute(stmt)
+conn.execute("COMMIT")     # atau ROLLBACK di blok except
+```
+
+Ini alasan `tools/apply_migrations.py` selalu memverifikasi ulang lewat
+**koneksi baru** di akhir — laporan "OK" dari koneksi yang sama bukan bukti.
+
+### 6.3 `INSERT … UNION ALL` dengan enum butuh cast
+
+```sql
+-- GAGAL: "column is of type volume_rule but expression is of type text"
+select 'fixed', 0.05 union all select 'multiplier', 1.0
+-- BENAR
+select 'fixed'::volume_rule, 0.05 union all select 'multiplier'::volume_rule, 1.0
+```
+
+Postgres menyimpulkan tipe gabungan `UNION ALL` sebagai `text`, bukan enum tujuan.
+
+---
+
+## 7. Yang belum ada
 
 - Tabel untuk sesi login dashboard
 - Tabel untuk snapshot equity/margin (kalau nanti dibutuhkan)

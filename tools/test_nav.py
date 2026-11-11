@@ -21,6 +21,7 @@ ROUTES = [
     ("#/follower/4",       "Follower 4 (hold)"),
     ("#/follower/new",     "Form tambah follower"),
     ("#/routing",          "Routing"),
+    ("#/flow",             "Alur Sistem"),
     ("#/log",              "Event Log"),
     ("#/workers",          "Workers"),
     ("#/security",         "Keamanan"),

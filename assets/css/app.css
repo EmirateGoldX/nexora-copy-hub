@@ -431,3 +431,68 @@ select.inp option{background:#0b1219;color:var(--txt)}
 @media (max-width:640px){
   .toast{bottom:calc(74px + env(safe-area-inset-bottom))}
 }
+
+/* ============================================================
+   HALAMAN ALUR SISTEM
+   ============================================================ */
+.pipe{display:grid;gap:10px;padding:15px;position:relative;
+  grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
+@media (min-width:1200px){.pipe{grid-template-columns:repeat(5,1fr)}}
+@media (min-width:1700px){.pipe{grid-template-columns:repeat(5,1fr)}}
+@media (max-width:1023px){.pipe{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.pipe{grid-template-columns:1fr}}
+.stage{border:1px solid var(--bd);border-radius:var(--r);background:var(--glass-2);
+  padding:12px 13px;position:relative;display:flex;flex-direction:column;gap:7px;min-width:0}
+.stage .sn{width:24px;height:24px;border-radius:8px;display:grid;place-items:center;font-size:11px;
+  font-weight:900;background:rgba(34,211,238,.14);color:#7dd3fc;
+  box-shadow:inset 0 0 0 1px rgba(34,211,238,.3)}
+.stage .st{font-size:var(--fs-sm);font-weight:800;line-height:1.25}
+.stage .sd{font-size:var(--fs-xs);color:var(--dim2);line-height:1.45}
+.stage .tag2{margin-top:auto;font-size:11px;font-weight:800;padding:3px 7px;border-radius:5px;
+  align-self:flex-start;background:rgba(255,255,255,.06);color:var(--dim)}
+.stage.done .sn{background:rgba(52,211,153,.16);color:#6ee7b7;
+  box-shadow:inset 0 0 0 1px rgba(52,211,153,.35)}
+.stage.warn .sn{background:rgba(251,191,36,.16);color:#fcd34d;
+  box-shadow:inset 0 0 0 1px rgba(251,191,36,.35)}
+.stage.warn{border-color:rgba(251,191,36,.28)}
+.stage.crit{border-color:rgba(251,113,133,.3)}
+.stage.crit .sn{background:rgba(251,113,133,.16);color:#fda4af;
+  box-shadow:inset 0 0 0 1px rgba(251,113,133,.35)}
+
+/* timeline eksekusi */
+.tline{display:flex;flex-direction:column;gap:0}
+.tlrow{display:flex;gap:11px;padding:9px 15px;border-bottom:1px solid var(--bd);align-items:flex-start;
+  font-size:var(--fs-sm)}
+.tlrow:last-child{border-bottom:none}
+.tlrow .no{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
+  font-size:10px;font-weight:900;background:rgba(255,255,255,.07);color:var(--dim);
+  box-shadow:inset 0 0 0 1px var(--bd2)}
+.tlrow.ok .no{background:rgba(52,211,153,.15);color:#6ee7b7;box-shadow:inset 0 0 0 1px rgba(52,211,153,.35)}
+.tlrow.bad .no{background:rgba(251,113,133,.15);color:#fda4af;box-shadow:inset 0 0 0 1px rgba(251,113,133,.35)}
+.tlrow.warn .no{background:rgba(251,191,36,.15);color:#fcd34d;box-shadow:inset 0 0 0 1px rgba(251,191,36,.35)}
+.tlrow .body{min-width:0;flex:1}
+.tlrow .h{font-weight:800;font-size:var(--fs-sm)}
+.tlrow .d{font-size:var(--fs-xs);color:var(--dim2);margin-top:2px;line-height:1.5}
+.tlrow .r{margin-left:auto;font-size:var(--fs-xs);color:var(--dim2);flex-shrink:0;text-align:right}
+
+/* state pill machine */
+.states{display:flex;flex-wrap:wrap;gap:6px;padding:14px 15px;align-items:center}
+.st{font-size:11px;font-weight:800;padding:5px 9px;border-radius:6px;letter-spacing:.3px;
+  background:rgba(255,255,255,.06);color:var(--dim);box-shadow:inset 0 0 0 1px var(--bd2)}
+.st.p{background:rgba(34,211,238,.13);color:#7dd3fc;box-shadow:inset 0 0 0 1px rgba(34,211,238,.3)}
+.st.g{background:rgba(52,211,153,.14);color:#6ee7b7;box-shadow:inset 0 0 0 1px rgba(52,211,153,.32)}
+.st.r{background:rgba(251,113,133,.14);color:#fda4af;box-shadow:inset 0 0 0 1px rgba(251,113,133,.32)}
+.st.a{background:rgba(251,191,36,.13);color:#fcd34d;box-shadow:inset 0 0 0 1px rgba(251,191,36,.3)}
+.arrow{color:var(--dim2);font-size:13px;font-weight:800}
+
+/* kartu kasus tepi */
+.edge{border:1px solid var(--bd);border-radius:var(--r);padding:13px 14px;background:var(--glass-2)}
+.edge .eh{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.edge .eh b{font-size:var(--fs-sm);font-weight:800}
+.edge .eh .k{font-size:10px;font-weight:900;padding:2px 6px;border-radius:4px;
+  background:rgba(251,191,36,.14);color:#fcd34d}
+.edge .eh .k.bad{background:rgba(251,113,133,.14);color:#fda4af}
+.edge .eb{font-size:var(--fs-xs);color:var(--dim);line-height:1.6}
+.edge .eb code{font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.4);
+  padding:1px 5px;border-radius:4px;color:#9fd8f5}
+.edge .eb .w{color:#fda4af;font-weight:700}

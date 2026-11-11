@@ -814,6 +814,262 @@
       </div>
     </div>`;
 
+
+  /* ---------- 11. ALUR SISTEM ---------- */
+  pages['flow'] = () => `
+    <div class="head">
+      <div><h1>Alur Sistem</h1>
+        <p>Bagaimana sebuah transaksi master berjalan sampai tereksekusi di follower</p></div>
+      <div class="clock mono">02:14:37 WIB</div>
+    </div>
+
+    <div class="g auto200">
+      <div class="card stat"><div class="lab">Gate</div>
+        <div class="val" style="font-size:var(--fs-lg);color:#fcd34d">PoC-1</div>
+        <div class="note">belum dijalankan &mdash; alur ini belum boleh dibangun penuh</div></div>
+      <div class="card stat"><div class="lab">Langkah inti</div>
+        <div class="val mono">9</div><div class="note">dari deteksi sampai konfirmasi</div></div>
+      <div class="card stat"><div class="lab">Idempotency</div>
+        <div class="val mono" style="color:#6ee7b7">WAJIB</div>
+        <div class="note">satu event tidak boleh dieksekusi dua kali</div></div>
+      <div class="card stat"><div class="lab">TTL instruksi</div>
+        <div class="val mono">8 s</div><div class="note">lebih dari itu dibuang, tidak dieksekusi</div></div>
+    </div>
+
+    <section class="card">
+      <div class="chead"><span class="tt">Alur utama</span>
+        <span class="sub">master &rarr; observer &rarr; copy engine &rarr; follower</span></div>
+      <div class="pipe">
+        <div class="stage">
+          <span class="sn">1</span>
+          <span class="st">Master trading</span>
+          <span class="sd">Dari MT5 Mobile, Desktop, atau Web. Tidak ada EA di sisi master.</span>
+          <span class="tag2">sumber bebas</span>
+        </div>
+        <div class="stage">
+          <span class="sn">2</span>
+          <span class="st">Broker eksekusi</span>
+          <span class="sd">Order masuk ke trade server. Ini satu-satunya sumber kebenaran state.</span>
+          <span class="tag2">server-side</span>
+        </div>
+        <div class="stage warn">
+          <span class="sn">3</span>
+          <span class="st">Observer membaca</span>
+          <span class="sd">Terminal cloud login investor password. Baca L1 (state) + L2 (deal history).</span>
+          <span class="tag2">250 ms poll</span>
+        </div>
+        <div class="stage">
+          <span class="sn">4</span>
+          <span class="st">Normalisasi event</span>
+          <span class="sd">Ubah state mentah jadi event bertipe: OPEN / MODIFY / PARTIAL / CLOSE / PENDING.</span>
+          <span class="tag2">diff engine</span>
+        </div>
+        <div class="stage crit">
+          <span class="sn">5</span>
+          <span class="st">Dedupe &amp; idempotency</span>
+          <span class="sd">Event yang sama dibuang. Tanpa ini, satu transaksi bisa jadi dua posisi.</span>
+          <span class="tag2">anti double-copy</span>
+        </div>
+        <div class="stage">
+          <span class="sn">6</span>
+          <span class="st">Routing</span>
+          <span class="sd">Cari follower yang terdaftar untuk master ini. Relasi harus eksplisit.</span>
+          <span class="tag2">master &rarr; N follower</span>
+        </div>
+        <div class="stage">
+          <span class="sn">7</span>
+          <span class="st">Risk &amp; mapping</span>
+          <span class="sd">Map symbol, hitung volume, cek margin, clamp SL/TP ke stops level broker tujuan.</span>
+          <span class="tag2">per broker</span>
+        </div>
+        <div class="stage">
+          <span class="sn">8</span>
+          <span class="st">Queue per follower</span>
+          <span class="sd">FIFO per akun. Retry terkontrol. Instruksi lewat TTL dibuang.</span>
+          <span class="tag2">persist</span>
+        </div>
+        <div class="stage crit">
+          <span class="sn">9</span>
+          <span class="st">Eksekusi follower</span>
+          <span class="sd">OrderCheck &rarr; OrderSend. Catat retcode, fill, reject, requote.</span>
+          <span class="tag2">tidak blind retry</span>
+        </div>
+        <div class="stage done">
+          <span class="sn">10</span>
+          <span class="st">Konfirmasi &amp; reconcile</span>
+          <span class="sd">Banding state follower vs master. Pisahkan allowed drift dari sync error.</span>
+          <span class="tag2">loop 10 s</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="chead"><span class="tt">Perjalanan satu transaksi</span>
+        <span class="sub">contoh: master buka posisi 0.10 XAUUSD</span></div>
+      <div class="tline">
+        <div class="tlrow ok"><span class="no">1</span><div class="body">
+          <div class="h">Master kirim order</div>
+          <div class="d">Operator entry dari MT5 Mobile. Order ke trade server master.</div></div>
+          <div class="r mono">t+0 ms</div></div>
+
+        <div class="tlrow ok"><span class="no">2</span><div class="body">
+          <div class="h">Broker mengisi order</div>
+          <div class="d">Posisi terbuka di server. <span class="mono">DEAL_ENTRY_IN</span> tercatat di history.</div></div>
+          <div class="r mono">t+45 ms</div></div>
+
+        <div class="tlrow ok"><span class="no">3</span><div class="body">
+          <div class="h">Observer mendeteksi</div>
+          <div class="d">Poll berikutnya melihat ticket baru di <span class="mono">PositionsTotal()</span> dan deal baru di history.</div></div>
+          <div class="r mono">t+120 ms</div></div>
+
+        <div class="tlrow ok"><span class="no">4</span><div class="body">
+          <div class="h">Event terbentuk</div>
+          <div class="d"><span class="mono">OPEN</span> · ticket 50121 · XAUUSD · BUY · 0.10 · SL 4090 · TP 4120</div></div>
+          <div class="r mono">t+124 ms</div></div>
+
+        <div class="tlrow ok"><span class="no">5</span><div class="body">
+          <div class="h">Dedupe lolos</div>
+          <div class="d">Kunci <span class="mono">master:A|deal:9001</span> belum pernah diproses. Lanjut.</div></div>
+          <div class="r mono">t+126 ms</div></div>
+
+        <div class="tlrow ok"><span class="no">6</span><div class="body">
+          <div class="h">Routing</div>
+          <div class="d">6 follower terdaftar untuk Master A. 6 instruksi dibuat.</div></div>
+          <div class="r mono">t+130 ms</div></div>
+
+        <div class="tlrow warn"><span class="no">7</span><div class="body">
+          <div class="h">Mapping per follower</div>
+          <div class="d">F1: XAUUSD, fixed 0.05 &middot; F2: XAUUSDm, ×1.0 &rarr; 0.10 &middot; F3: XAUUSD.m, equity 0.8× &rarr; 0.08<br>
+             SL/TP di-clamp: broker F3 stops level 32 pts &rarr; SL digeser 3.2 poin.</div></div>
+          <div class="r mono">t+134 ms</div></div>
+
+        <div class="tlrow ok"><span class="no">8</span><div class="body">
+          <div class="h">OrderCheck</div>
+          <div class="d">Margin cukup, volume valid, filling mode sesuai. 6/6 lolos.</div></div>
+          <div class="r mono">t+138 ms</div></div>
+
+        <div class="tlrow ok"><span class="no">9</span><div class="body">
+          <div class="h">OrderSend</div>
+          <div class="d">5 follower terisi penuh. F3 requote &rarr; dicoba ulang sekali, berhasil.</div></div>
+          <div class="r mono">t+280 ms</div></div>
+
+        <div class="tlrow ok"><span class="no">10</span><div class="body">
+          <div class="h">Ack &amp; simpan pemetaan</div>
+          <div class="d">master 50121 &harr; follower [F1#771, F2#812, F3#419, ...] disimpan untuk melacak close/partial nanti.</div></div>
+          <div class="r mono">t+290 ms</div></div>
+
+        <div class="tlrow ok"><span class="no">11</span><div class="body">
+          <div class="h">Reconcile</div>
+          <div class="d">Siklus berikutnya: state follower cocok. Drift 0.</div></div>
+          <div class="r mono">t+10 s</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="chead"><span class="tt">Siklus hidup instruksi</span>
+        <span class="sub">state machine per follower</span></div>
+      <div class="states">
+        <span class="st">QUEUED</span><span class="arrow">&rarr;</span>
+        <span class="st p">SENT</span><span class="arrow">&rarr;</span>
+        <span class="st g">ACKED</span>
+        <span class="arrow" style="margin-left:14px">&nbsp;</span>
+        <span class="st a">RETRY</span><span class="arrow">&rarr;</span>
+        <span class="st p">SENT</span>
+        <span class="arrow" style="margin-left:14px">&nbsp;</span>
+        <span class="st r">FAILED</span>
+        <span class="arrow" style="margin-left:14px">&nbsp;</span>
+        <span class="st">STALE</span><span class="arrow">&rarr;</span>
+        <span class="st r">DIBUANG</span>
+      </div>
+      <div class="pad" style="border-top:1px solid var(--bd)">
+        <div class="kv"><span class="k">QUEUED</span><span class="v">Menunggu giliran di antrean follower tersebut</span></div>
+        <div class="kv"><span class="k">SENT</span><span class="v">Sudah dikirim ke worker, menunggu hasil</span></div>
+        <div class="kv"><span class="k">ACKED</span><span class="v">Broker menerima &middot; retcode sukses &middot; fill tercatat</span></div>
+        <div class="kv"><span class="k">RETRY</span><span class="v">Requote / gagal sementara &middot; <b>hanya setelah status diverifikasi</b></span></div>
+        <div class="kv"><span class="k">FAILED</span><span class="v">Ditolak permanen (margin, symbol, volume) &middot; alert operator</span></div>
+        <div class="kv"><span class="k">STALE</span><span class="v">Lewat TTL sebelum sempat dieksekusi</span></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="chead"><span class="tt">Kasus tepi yang wajib ditangani</span>
+        <span class="sub">inilah yang membuat copy trading gagal di sistem lain</span></div>
+      <div class="g auto268" style="padding:15px">
+        <div class="edge">
+          <div class="eh"><span class="k bad">KRITIS</span><b>Partial close</b></div>
+          <div class="eb"><code>DEAL_ENTRY_OUT</code> muncul di partial <b>dan</b> full close.
+            Pembeda wajib: <code>DEAL_VOLUME</code> + sisa <code>POSITION_VOLUME</code> + <code>DEAL_POSITION_ID</code>.
+            Salah tafsir = follower menutup seluruh posisi padahal master hanya sebagian.</div>
+        </div>
+        <div class="edge">
+          <div class="eh"><span class="k bad">KRITIS</span><b>Double copy</b></div>
+          <div class="eb">Event yang sama terbaca dua kali (reconnect, replay queue).
+            Tanpa idempotency key, follower membuka dua posisi untuk satu aksi master.</div>
+        </div>
+        <div class="edge">
+          <div class="eh"><span class="k">PENTING</span><b>Reverse &amp; close-by</b></div>
+          <div class="eb"><code>DEAL_ENTRY_INOUT</code> = reversal (netting, satu deal tutup + buka).
+            <code>DEAL_ENTRY_OUT_BY</code> = close by posisi berlawanan (hedging). Dua-duanya bukan close biasa.</div>
+        </div>
+        <div class="edge">
+          <div class="eh"><span class="k">PENTING</span><b>Pending order</b></div>
+          <div class="eb">Order pending bisa <b>terisi</b> atau <b>hilang</b> (cancel/expire). Dua-duanya
+            hilang dari daftar order tapi artinya berbeda total &mdash; cek history untuk membedakan.</div>
+        </div>
+        <div class="edge">
+          <div class="eh"><span class="k bad">KRITIS</span><b>Stale instruction</b></div>
+          <div class="eb">Follower reconnect lalu menerima instruksi lama. Instruksi yang lewat TTL
+            <b>harus dibuang</b>, dan reconcile dijalankan sebelum menerima instruksi baru.</div>
+        </div>
+        <div class="edge">
+          <div class="eh"><span class="k">PENTING</span><b>Lintas broker</b></div>
+          <div class="eb">Nama symbol, digits, contract size, lot step, filling mode, stops level
+            berbeda tiap broker. Tidak boleh diasumsikan sama &mdash; harus dibaca dari spec broker tujuan.</div>
+        </div>
+        <div class="edge">
+          <div class="eh"><span class="k">PENTING</span><b>Master stale</b></div>
+          <div class="eb">Observer hidup tapi data tidak berubah. Harus dideteksi lewat heartbeat,
+            bukan diasumsikan sepi transaksi. Copy ditahan sampai data segar lagi.</div>
+        </div>
+        <div class="edge">
+          <div class="eh"><span class="k">PENTING</span><b>Posisi orphan</b></div>
+          <div class="eb">Koneksi putus saat follower masih punya posisi. Jangan auto-close.
+            Tahan entry baru, pertahankan SL/TP, tandai ORPHANED, reconcile dulu.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="chead"><span class="tt">Yang belum boleh dikerjakan</span>
+        <span class="r"><span class="chip am">menunggu PoC-1</span></span></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Langkah</th><th>Butuh dibuktikan dulu</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td><b>3 &mdash; Observer membaca</b></td>
+              <td>Terminal investor password mendeteksi 100% perubahan, termasuk yang dibuka dari MT5 Mobile</td>
+              <td><span class="fstat s-warn">BELUM DIUJI</span></td></tr>
+            <tr><td><b>4 &mdash; Normalisasi event</b></td>
+              <td>Partial close bisa dibedakan dari full close lewat data nyata</td>
+              <td><span class="fstat s-warn">BELUM DIUJI</span></td></tr>
+            <tr><td><b>9 &mdash; Eksekusi follower</b></td>
+              <td>Perilaku reject/requote tiap broker pada kondisi nyata</td>
+              <td><span class="fstat s-warn">BELUM DIUJI</span></td></tr>
+            <tr><td><b>10 &mdash; Reconcile</b></td>
+              <td>Definisi drift terbukti bisa mencapai nol unexplained drift</td>
+              <td><span class="fstat s-warn">BELUM DIUJI</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pad" style="border-top:1px solid var(--bd)">
+        <div class="hint warn" style="display:flex;gap:8px;align-items:flex-start">
+          <span>&#9888;</span>
+          <span>Seluruh alur di halaman ini adalah <b>rancangan</b>, bukan sistem yang sudah berjalan.
+          PoC-1 (observer) belum dijalankan dan belum menghasilkan satu pun data pengujian.</span>
+        </div>
+      </div>
+    </section>`;
+
   /* ---------- 404 ---------- */
   function notFound(kind, id) {
     return `
@@ -849,6 +1105,7 @@
     { id: 'masters',  path: '#/masters',   label: 'Master',  badge: D.masters.length },
     { id: 'followers',path: '#/followers', label: 'Follower',badge: D.followers.length },
     { id: 'routing',  path: '#/routing',   label: 'Routing' },
+    { id: 'flow',     path: '#/flow',      label: 'Alur Sistem' },
     { id: 'log',      path: '#/log',       label: 'Event Log' },
     { id: 'workers',  path: '#/workers',   label: 'Workers', badge: D.workers.length },
     { id: 'security', path: '#/security',  label: 'Keamanan' },

@@ -88,6 +88,197 @@
       <div class="fgrid">${followerList.map(followerCard).join('')}</div>
     </section>`;
 
+
+  /* ============================================================
+     FORM — TAMBAH MASTER / FOLLOWER
+     Catatan: tahap ini belum ada backend. Submit memvalidasi input
+     lalu menambah entri ke data sesi (hilang saat reload).
+     Password TIDAK pernah disimpan atau dikirim ke mana pun.
+     ============================================================ */
+
+  const TOAST = (msg, kind = 'ok') => {
+    const el = document.createElement('div');
+    el.className = 'toast ' + kind;
+    el.textContent = msg;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+    setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 250); }, 4200);
+  };
+
+  const fld = (o) => `
+    <div class="field${o.wide ? ' wide' : ''}">
+      <label for="${o.id}">${o.label}${o.req ? ' <span class="req">*</span>' : ''}${o.opt ? ' <span class="opt">(' + o.opt + ')</span>' : ''}</label>
+      ${o.control}
+      ${o.hint ? `<div class="hint${o.hintKind ? ' ' + o.hintKind : ''}">${o.hint}</div>` : ''}
+      <div class="errmsg" id="err-${o.id}"></div>
+    </div>`;
+
+  const inp = (id, ph, opts = '') => `<input class="inp${opts.includes('mono') ? ' mono' : ''}" id="${id}" name="${id}" placeholder="${ph}" ${opts.replace('mono', '')} autocomplete="off">`;
+  const pw = (id, ph, opts = '') => `
+    <div class="pwwrap">
+      <input class="inp" type="password" id="${id}" name="${id}" placeholder="${ph}" ${opts} autocomplete="new-password">
+      <button class="eye" type="button" data-eye="${id}" aria-label="Lihat password">&#128065;</button>
+    </div>`;
+  const sel = (id, options, opts = '') =>
+    `<select class="inp" id="${id}" name="${id}" ${opts}>${options.map(o =>
+      `<option value="${esc(o.v)}"${o.sel ? ' selected' : ''}>${esc(o.t)}</option>`).join('')}</select>`;
+
+  const masterForm = () => `
+    <div class="crumb"><a href="#/masters">Master</a><span class="s">/</span><span>Tambah</span></div>
+    <div class="head">
+      <div><h1>Tambah Master</h1>
+        <p>Daftarkan akun master untuk diamati lewat investor password (read-only)</p></div>
+    </div>
+
+    <form id="form-master" novalidate>
+      <div class="card">
+        <div class="fsect">
+          <div class="fh"><span class="n">1</span><span class="t">Identitas akun</span>
+            <span class="d">data yang terlihat di dashboard</span></div>
+          <div class="fbody">
+            ${fld({ id: 'm_broker', label: 'Broker name', req: 1, control: inp('m_broker', 'mis. Exness'),
+                   hint: 'Nama broker pemilik akun' })}
+            ${fld({ id: 'm_server', label: 'Server name', req: 1, control: inp('m_server', 'mis. Exness-MT5Trial14', 'mono'),
+                   hint: 'Persis seperti di terminal MT5 &mdash; beda server = tidak bisa login' })}
+            ${fld({ id: 'm_login', label: 'ID / nomor akun', req: 1,
+                   control: inp('m_login', 'mis. 415823123', 'mono inputmode="numeric" inputmode="numeric"'),
+                   hint: 'Hanya angka, biasanya 8&ndash;9 digit' })}
+            ${fld({ id: 'm_pw', label: 'Investor password', req: 1,
+                   control: pw('m_pw', 'investor password akun master'),
+                   hint: 'Read-only &mdash; tidak bisa trading. Disimpan terenkripsi.' })}
+            ${fld({ id: 'm_label', label: 'Label master', req: 1, control: inp('m_label', 'mis. Master A'),
+                   hint: 'Nama pendek yang tampil di dashboard' })}
+            ${fld({ id: 'm_symbol', label: 'Symbol utama', req: 1,
+                   control: sel('m_symbol', [
+                     { v: 'XAUUSD', t: 'XAUUSD', sel: 1 }, { v: 'XAUUSDm', t: 'XAUUSDm' },
+                     { v: 'XAUUSD.m', t: 'XAUUSD.m' }, { v: 'GOLD', t: 'GOLD' },
+                   ]) })}
+          </div>
+        </div>
+
+        <div class="fsect">
+          <div class="fh"><span class="n">2</span><span class="t">Opsi deteksi</span></div>
+          <div class="fbody">
+            ${fld({ id: 'm_poll', label: 'Interval polling',
+                   control: sel('m_poll', [
+                     { v: '250', t: '250 ms', sel: 1 }, { v: '500', t: '500 ms' }, { v: '1000', t: '1000 ms' },
+                   ]), hint: 'Parameter eksperimen, bukan jaminan latensi' })}
+            <div class="field wide">
+              <div class="tglrow">
+                <div><div class="tt">Deteksi lapisan L2 (deal history)</div>
+                  <div class="td">Menangkap transaksi di antara dua siklus polling &mdash; wajib untuk partial close</div></div>
+                <button type="button" class="tgl on" data-tgl="m_l2" aria-pressed="true"></button>
+              </div>
+              <div class="tglrow">
+                <div><div class="tt">Tandai stale otomatis</div>
+                  <div class="td">Hentikan copy ke follower bila data tidak berubah &gt; 3 menit</div></div>
+                <button type="button" class="tgl on" data-tgl="m_stale" aria-pressed="true"></button>
+              </div>
+            </div>
+            ${fld({ id: 'm_note', label: 'Catatan', opt: 'opsional', wide: 1,
+                   control: `<textarea class="inp" id="m_note" rows="2" placeholder="mis. akun demo untuk uji"></textarea>` })}
+          </div>
+        </div>
+
+        <div class="formfoot" style="padding:15px">
+          <button class="btn pri" type="submit">Simpan master</button>
+          <a class="btn" href="#/masters">Batal</a>
+          <span class="note">Belum terhubung ke backend &mdash; data hanya untuk sesi ini</span>
+        </div>
+      </div>
+    </form>`;
+
+  const followerForm = () => `
+    <div class="crumb"><a href="#/followers">Follower</a><span class="s">/</span><span>Tambah</span></div>
+    <div class="head">
+      <div><h1>Tambah Follower</h1>
+        <p>Daftarkan akun eksekutor &mdash; butuh kredensial dengan hak transaksi</p></div>
+    </div>
+
+    <form id="form-follower" novalidate>
+      <div class="card">
+        <div class="fsect">
+          <div class="fh"><span class="n">1</span><span class="t">Identitas akun</span></div>
+          <div class="fbody">
+            ${fld({ id: 'f_broker', label: 'Broker name', req: 1, control: inp('f_broker', 'mis. IC Markets'),
+                   hint: 'Nama broker pemilik akun' })}
+            ${fld({ id: 'f_server', label: 'Server name', req: 1, control: inp('f_server', 'mis. ICMarkets-MT5', 'mono'),
+                   hint: 'Persis seperti di terminal MT5' })}
+            ${fld({ id: 'f_login', label: 'ID / nomor akun', req: 1,
+                   control: inp('f_login', 'mis. 1191030705', 'mono inputmode="numeric"'),
+                   hint: 'Hanya angka' })}
+            ${fld({ id: 'f_pw', label: 'Trading password', req: 1,
+                   control: pw('f_pw', 'password dengan hak trading'),
+                   hint: 'Bukan investor password. Disimpan terenkripsi.' })}
+            ${fld({ id: 'f_label', label: 'Label follower', req: 1, control: inp('f_label', 'mis. Follower 19') })}
+            <div class="field">
+              <div class="hint warn" style="display:flex;gap:8px;align-items:flex-start;padding-top:22px">
+                <span>&#9888;</span>
+                <span>Kredensial follower = aset paling sensitif. Envelope encryption, akses per worker,
+                tidak pernah masuk log atau repo.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fsect">
+          <div class="fh"><span class="n">2</span><span class="t">Routing &amp; penyalinan</span></div>
+          <div class="fbody">
+            ${fld({ id: 'f_master', label: 'Master sumber', req: 1,
+                   control: sel('f_master', D.masters.map((m, i) => ({ v: m.id, t: `${m.name} — ${m.broker}`, sel: i === 0 }))) })}
+            ${fld({ id: 'f_map_src', label: 'Symbol master', req: 1,
+                   control: inp('f_map_src', 'XAUUSD', 'mono readonly'),
+                   hint: 'Terisi otomatis dari master' })}
+            ${fld({ id: 'f_map_dst', label: 'Symbol follower', req: 1, control: inp('f_map_dst', 'mis. XAUUSDm', 'mono'),
+                   hint: 'Nama symbol persis di broker follower' })}
+            <div class="field wide">
+              <label>Volume rule <span class="req">*</span></label>
+              <div class="seg">
+                <label><input type="radio" name="f_voltype" value="fixed" checked><span>Fixed lot</span></label>
+                <label><input type="radio" name="f_voltype" value="multi"><span>Multiplier</span></label>
+                <label><input type="radio" name="f_voltype" value="equity"><span>Equity ratio</span></label>
+              </div>
+              <div class="hint" id="volhint">Lot tetap untuk setiap posisi</div>
+            </div>
+            ${fld({ id: 'f_volval', label: 'Nilai volume', req: 1, control: inp('f_volval', '0.05', 'mono inputmode="decimal"'),
+                   hint: 'Fixed: 0.05 &middot; Multiplier: 1.0 &middot; Equity: 0.8' })}
+          </div>
+        </div>
+
+        <div class="fsect">
+          <div class="fh"><span class="n">3</span><span class="t">Opsi eksekusi &amp; batas aman</span></div>
+          <div class="fbody">
+            <div class="field wide">
+              <div class="tglrow">
+                <div><div class="tt">Salin partial close</div>
+                  <div class="td">Dibedakan dari full close lewat volume + DEAL_POSITION_ID</div></div>
+                <button type="button" class="tgl on" data-tgl="f_partial" aria-pressed="true"></button>
+              </div>
+              <div class="tglrow">
+                <div><div class="tt">Salin pending order</div>
+                  <div class="td">Placed / modified / cancelled / filled</div></div>
+                <button type="button" class="tgl on" data-tgl="f_pending" aria-pressed="true"></button>
+              </div>
+              <div class="tglrow">
+                <div><div class="tt">Clamp SL/TP ke stops level broker</div>
+                  <div class="td">Mencegah order ditolak karena jarak SL/TP terlalu dekat</div></div>
+                <button type="button" class="tgl on" data-tgl="f_clamp" aria-pressed="true"></button>
+              </div>
+            </div>
+            ${fld({ id: 'f_maxlot', label: 'Max lot per posisi', opt: 'opsional', control: inp('f_maxlot', 'mis. 0.50', 'mono inputmode="decimal"'),
+                   hint: 'Kosongkan bila tidak dibatasi' })}
+            ${fld({ id: 'f_maxpos', label: 'Max posisi terbuka', opt: 'opsional', control: inp('f_maxpos', 'mis. 5', 'mono inputmode="numeric"') })}
+          </div>
+        </div>
+
+        <div class="formfoot" style="padding:15px">
+          <button class="btn pri" type="submit">Simpan follower</button>
+          <a class="btn" href="#/followers">Batal</a>
+          <span class="note">Belum terhubung ke backend &mdash; data hanya untuk sesi ini</span>
+        </div>
+      </div>
+    </form>`;
+
   /* ============================================================
      HALAMAN
      ============================================================ */
@@ -187,11 +378,13 @@
       <div><h1>Master</h1>
         <p>${D.masters.length} akun master diamati lewat investor password (read-only)</p></div>
       <div class="clock mono">02:14:37 WIB</div>
+      <a class="btn pri" href="#/master/new">+ Tambah Master</a>
     </div>
     ${D.masters.map(m => masterCard(m, D.followers.filter(f => f.master === m.id))).join('')}`;
 
   /* ---------- 3. MASTER DETAIL ---------- */
   pages['master'] = (id) => {
+    if (id === 'new') return masterForm();
     const m = D.masters.find(x => x.id === id);
     if (!m) return notFound('Master', id);
     const fl = D.followers.filter(f => f.master === m.id);
@@ -256,6 +449,7 @@
       <div><h1>Follower</h1>
         <p>${D.followers.length} akun eksekutor &middot; trading credential &middot; lintas broker</p></div>
       <div class="clock mono">02:14:37 WIB</div>
+      <a class="btn pri" href="#/follower/new">+ Tambah Follower</a>
     </div>
     <div class="card">
       <div class="tbl">
@@ -285,6 +479,7 @@
 
   /* ---------- 5. FOLLOWER DETAIL ---------- */
   pages['follower'] = (id) => {
+    if (id === 'new') return followerForm();
     const f = D.followers.find(x => x.id === Number(id));
     if (!f) return notFound('Follower', id);
     const m = D.masters.find(x => x.id === f.master);
@@ -685,6 +880,132 @@
     window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
     document.title = 'NEXORA COPY HUB — ' + (NAV.find(n => n.id === admin)?.label || 'Control Room');
   }
+
+
+  /* ============================================================
+     FORM HANDLER — validasi nyata, password tidak pernah disimpan
+     ============================================================ */
+
+  const setErr = (id, msg) => {
+    const f = document.getElementById(id);
+    const e = document.getElementById('err-' + id);
+    if (f) f.classList.add('err');
+    if (e) { e.textContent = msg; e.classList.add('on'); }
+  };
+  const clearErrs = (form) => {
+    form.querySelectorAll('.inp').forEach(i => i.classList.remove('err'));
+    form.querySelectorAll('.errmsg').forEach(e => { e.classList.remove('on'); e.textContent = ''; });
+  };
+  const val = (id) => (document.getElementById(id)?.value || '').trim();
+
+  function validateMaster() {
+    let ok = true;
+    const broker = val('m_broker'), server = val('m_server'), login = val('m_login'),
+          pass = val('m_pw'), label = val('m_label');
+    if (broker.length < 2) { setErr('m_broker', 'Broker name wajib diisi'); ok = false; }
+    if (server.length < 3) { setErr('m_server', 'Server name wajib diisi (persis seperti di MT5)'); ok = false; }
+    if (!/^\d{4,12}$/.test(login)) { setErr('m_login', 'ID harus angka 4–12 digit'); ok = false; }
+    if (pass.length < 4) { setErr('m_pw', 'Password minimal 4 karakter'); ok = false; }
+    if (label.length < 1) { setErr('m_label', 'Label wajib diisi'); ok = false; }
+    return ok;
+  }
+
+  function validateFollower() {
+    let ok = true;
+    const broker = val('f_broker'), server = val('f_server'), login = val('f_login'),
+          pass = val('f_pw'), label = val('f_label'), dst = val('f_map_dst'),
+          volv = val('f_volval');
+    if (broker.length < 2) { setErr('f_broker', 'Broker name wajib diisi'); ok = false; }
+    if (server.length < 3) { setErr('f_server', 'Server name wajib diisi'); ok = false; }
+    if (!/^\d{4,12}$/.test(login)) { setErr('f_login', 'ID harus angka 4–12 digit'); ok = false; }
+    if (pass.length < 4) { setErr('f_pw', 'Password minimal 4 karakter'); ok = false; }
+    if (label.length < 1) { setErr('f_label', 'Label wajib diisi'); ok = false; }
+    if (dst.length < 2) { setErr('f_map_dst', 'Symbol follower wajib diisi'); ok = false; }
+    if (!/^\d*\.?\d+$/.test(volv) || parseFloat(volv) <= 0) { setErr('f_volval', 'Nilai volume harus angka > 0'); ok = false; }
+    return ok;
+  }
+
+  /* toggle switch */
+  document.addEventListener('click', (e) => {
+    const tg = e.target.closest('[data-tgl]');
+    if (tg) {
+      tg.classList.toggle('on');
+      tg.setAttribute('aria-pressed', tg.classList.contains('on') ? 'true' : 'false');
+    }
+    const eye = e.target.closest('[data-eye]');
+    if (eye) {
+      const inp = document.getElementById(eye.dataset.eye);
+      if (inp) {
+        const show = inp.type === 'password';
+        inp.type = show ? 'text' : 'password';
+        eye.textContent = show ? '\u{1F576}' : '\u{1F441}';
+        eye.setAttribute('aria-label', show ? 'Sembunyikan password' : 'Lihat password');
+      }
+    }
+  });
+
+  /* hint volume rule */
+  document.addEventListener('change', (e) => {
+    if (e.target.name === 'f_voltype') {
+      const h = document.getElementById('volhint');
+      const map = {
+        fixed: 'Lot tetap untuk setiap posisi',
+        multi: 'Lot master dikali nilai ini (mis. 1.0 = sama, 0.5 = separuh)',
+        equity: 'Lot diskalakan menurut rasio equity follower terhadap master',
+      };
+      if (h) h.textContent = map[e.target.value] || '';
+    }
+    if (e.target.id === 'f_master') {
+      const m = D.masters.find(x => x.id === e.target.value);
+      const src = document.getElementById('f_map_src');
+      if (m && src) src.value = m.symbol;
+    }
+  });
+
+  /* submit */
+  document.addEventListener('submit', (e) => {
+    const form = e.target;
+    if (form.id !== 'form-master' && form.id !== 'form-follower') return;
+    e.preventDefault();
+    clearErrs(form);
+
+    if (form.id === 'form-master') {
+      if (!validateMaster()) { TOAST('Periksa kolom yang ditandai merah', 'bad'); return; }
+      const used = new Set(D.masters.map(m => m.id));
+      const id = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').find(c => !used.has(c)) || 'X';
+      // PASSWORD SENGAJA TIDAK DISIMPAN
+      D.masters.push({
+        id, key: id, name: val('m_label'), broker: val('m_broker'), login: val('m_login'),
+        symbol: val('m_symbol'), mode: 'investor read-only', health: 'ok',
+        latency: null, lastEvent: 'menunggu event', staleMins: 0,
+        layers: val('m_poll') === '250' ? 'L1+L2 · 250ms' : 'L1+L2 · ' + val('m_poll') + 'ms',
+        followers: 0, open: 0, drift: 0, syncErr: 0,
+      });
+      TOAST('Master "' + val('m_label') + '" ditambahkan (sesi ini) — password tidak disimpan');
+      location.hash = '#/masters';
+      return;
+    }
+
+    if (!validateFollower()) { TOAST('Periksa kolom yang ditandai merah', 'bad'); return; }
+    const nextId = Math.max(0, ...D.followers.map(f => f.id)) + 1;
+    const type = document.querySelector('input[name="f_voltype"]:checked').value;
+    const volv = val('f_volval');
+    const volLabel = type === 'fixed' ? 'Fixed ' + volv
+      : type === 'multi' ? 'Multiplier ×' + volv
+      : 'Equity ' + volv + '×';
+    const master = D.masters.find(x => x.id === val('f_master'));
+    // PASSWORD SENGAJA TIDAK DISIMPAN
+    D.followers.push({
+      id: nextId, name: val('f_label'), master: val('f_master'),
+      broker: val('f_broker'), login: val('f_login'),
+      map: (master ? master.symbol : 'XAUUSD') + ' → ' + val('f_map_dst'),
+      vol: volLabel, status: 'idle', conn: 'offline', open: 0,
+      latency: null, drift: 0, allowed: 0, sltp: 'menunggu koneksi',
+      note: 'baru ditambahkan — belum terhubung',
+    });
+    TOAST('Follower "' + val('f_label') + '" ditambahkan (sesi ini) — password tidak disimpan');
+    location.hash = '#/followers';
+  });
 
   /* aksi tombol demo */
   document.addEventListener('click', (e) => {

@@ -1,0 +1,30 @@
+# node / os
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# editor
+.vscode/
+.idea/
+*.swp
+
+# logs
+*.log
+
+# ---- KEAMANAN: JANGAN PERNAH COMMIT INI ----
+# Kredensial akun trading (master investor password, follower trading password)
+.env
+.env.*
+!.env.example
+*credentials*
+*secret*
+*.pem
+*.p12
+*.key
+config/local.*
+config/*.private.*
+
+# data akun / dump
+*.sqlite
+*.db
+backups/

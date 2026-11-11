@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="NEXORA COPY HUB — cloud copy trading control dashboard (interface prototype)">
+<title>NEXORA COPY HUB — Control Room</title>
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <a class="brand" href="#/">
+      <span class="mark">NX</span>
+      <div>
+        <div class="nm">NEXORA COPY HUB</div>
+        <div class="sub">CLOUD ENGINE</div>
+      </div>
+    </a>
+
+    <nav class="nav" id="nav" aria-label="Navigasi utama"></nav>
+
+    <div class="actions">
+      <span class="chip gn"><span class="live"></span>18 SINKRON</span>
+      <span class="chip gray mono">DEMO</span>
+      <span class="chip am">MOCKUP</span>
+      <button class="btn" type="button" data-act="pause-all">Jeda semua</button>
+      <button class="btn stop" type="button" data-act="emergency-stop">&#9211; STOP</button>
+    </div>
+  </header>
+
+  <main class="wrap" id="view" role="main"></main>
+
+  <div class="mobilebar">
+    <button class="btn" type="button" data-act="reconcile">&#8862; Reconcile</button>
+    <button class="btn stop" type="button" data-act="emergency-stop">&#9211; EMERGENCY STOP</button>
+  </div>
+
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
